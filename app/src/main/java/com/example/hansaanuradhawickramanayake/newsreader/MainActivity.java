@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
         articlesDB = this.openOrCreateDatabase("Articles", MODE_PRIVATE, null);
         articlesDB.execSQL("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY, articleId INTEGER, title VARCHAR, content VARCHAR)");
 
+
+
         DownloadTask task = new DownloadTask();
         try{
 
@@ -55,22 +57,33 @@ public class MainActivity extends AppCompatActivity {
 
 
         titleListView = findViewById(R.id.titleListView);
-
         arrayAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, titles);
         titleListView.setAdapter(arrayAdapter);
 
 
 
+        titleListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(MainActivity.this, NewsActivity.class);
+                intent.putExtra("content", content.get(position));
+                startActivity(intent);
+            }
+        });
+
+        updateListView();
+
     }
 
     public void updateListView(){
+
 
         Cursor c = articlesDB.rawQuery("SELECT * FROM articles", null);
 
         int contentIndex = c.getColumnIndex("content");
         int titleIndex = c.getColumnIndex("title");
 
-        if (c.moveToFirst()){
+        if (c.moveToFirst()) {
 
             titles.clear();
             content.clear();
@@ -80,12 +93,15 @@ public class MainActivity extends AppCompatActivity {
                 titles.add(c.getString(titleIndex));
                 content.add(c.getString(contentIndex));
 
-            }while (c.moveToFirst());
+            } while (c.moveToNext());
+
+            arrayAdapter.notifyDataSetChanged();
 
         }
 
 
     }
+
 
     public class DownloadTask extends AsyncTask<String, Void, String>{
 
@@ -182,8 +198,6 @@ public class MainActivity extends AppCompatActivity {
 
                         }
 
-                        Log.i("Article content", articleContent);
-
                         String sql = "INSERT INTO articles (articleId, title, content) VALUES (?, ?, ?)";
 
                         SQLiteStatement statement = articlesDB.compileStatement(sql);
@@ -205,9 +219,14 @@ public class MainActivity extends AppCompatActivity {
                 return null;
             }
 
-
         }
 
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+
+            updateListView();
+        }
     }
 
 }
