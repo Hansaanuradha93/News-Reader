@@ -1,6 +1,9 @@
 package com.example.hansaanuradhawickramanayake.newsreader;
 
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,14 +27,21 @@ public class MainActivity extends AppCompatActivity {
 
     ListView titleListView;
 
-    ArrayList<String> titles;
+    ArrayList<String> titles = new ArrayList<>();
+    ArrayList<String> content = new ArrayList<>();
+
+
     ArrayAdapter<String> arrayAdapter;
+
+    SQLiteDatabase articlesDB;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        articlesDB = this.openOrCreateDatabase("Articles", MODE_PRIVATE, null);
+        articlesDB.execSQL("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY, articleId INTEGER, title VARCHAR, content VARCHAR)");
 
         DownloadTask task = new DownloadTask();
         try{
@@ -46,22 +56,34 @@ public class MainActivity extends AppCompatActivity {
 
         titleListView = findViewById(R.id.titleListView);
 
-        titles = new ArrayList<>();
         arrayAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, titles);
         titleListView.setAdapter(arrayAdapter);
 
 
-        titleListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-                Toast.makeText(MainActivity.this, position + "", Toast.LENGTH_SHORT).show();
+    }
 
-                Intent intent = new Intent(MainActivity.this, NewsActivity.class);
-                startActivity(intent);
+    public void updateListView(){
 
-            }
-        });
+        Cursor c = articlesDB.rawQuery("SELECT * FROM articles", null);
+
+        int contentIndex = c.getColumnIndex("content");
+        int titleIndex = c.getColumnIndex("title");
+
+        if (c.moveToFirst()){
+
+            titles.clear();
+            content.clear();
+
+            do {
+
+                titles.add(c.getString(titleIndex));
+                content.add(c.getString(contentIndex));
+
+            }while (c.moveToFirst());
+
+        }
+
 
     }
 
@@ -108,6 +130,8 @@ public class MainActivity extends AppCompatActivity {
 
                     numberOfItems = jsonArray.length();
                 }
+
+                articlesDB.execSQL("DELETE FROM articles");
 
                 for (int i = 0; i < numberOfItems; i++){
 
@@ -159,6 +183,15 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         Log.i("Article content", articleContent);
+
+                        String sql = "INSERT INTO articles (articleId, title, content) VALUES (?, ?, ?)";
+
+                        SQLiteStatement statement = articlesDB.compileStatement(sql);
+                        statement.bindString(1, articleId);
+                        statement.bindString(2, articleTitle);
+                        statement.bindString(3, articleContent);
+
+                        statement.execute();
                     }
 
                 }
