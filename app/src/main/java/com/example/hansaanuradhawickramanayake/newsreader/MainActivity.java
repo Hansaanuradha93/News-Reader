@@ -4,12 +4,14 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
@@ -30,14 +32,21 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+        DownloadTask task = new DownloadTask();
+        try{
+
+            task.execute("https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty");
+
+        } catch (Exception e){
+
+            e.printStackTrace();
+        }
+
+
         titleListView = findViewById(R.id.titleListView);
 
         titles = new ArrayList<>();
-        titles.add("first news");
-        titles.add("first news");
-        titles.add("first news");
-
-
         arrayAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, titles);
         titleListView.setAdapter(arrayAdapter);
 
@@ -81,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 
                 char current;
 
-                while(data != -1){
+                while(data != -1 ){
 
                     current = (char) data;
 
@@ -91,7 +100,71 @@ public class MainActivity extends AppCompatActivity {
 
                 }
 
+                JSONArray jsonArray = new JSONArray(result);
+
+                int numberOfItems = 20;
+
+                if (jsonArray.length() < 20){
+
+                    numberOfItems = jsonArray.length();
+                }
+
+                for (int i = 0; i < numberOfItems; i++){
+
+                    String articleId = jsonArray.getString(i);
+
+                    url = new URL("https://hacker-news.firebaseio.com/v0/item/" + articleId +".json?print=pretty");
+
+                    urlConnection = (HttpURLConnection) url.openConnection();
+
+                    inputStream = urlConnection.getInputStream();
+
+                    reader = new InputStreamReader(inputStream);
+
+                    data = reader.read();
+
+                    String articleInfo = "";
+
+                    while(data != -1 ){
+
+                        current = (char) data;
+
+                        articleInfo += current;
+
+                        data = reader.read();
+
+                    }
+
+                    JSONObject jsonObject = new JSONObject(articleInfo);
+
+                    if (!jsonObject.isNull("title") && !jsonObject.isNull("url")){
+
+                        String articleTitle = jsonObject.getString("title");
+                        String articleURL = jsonObject.getString("url");
+
+                        url = new URL(articleURL);
+                        urlConnection = (HttpURLConnection) url.openConnection();
+                        inputStream = urlConnection.getInputStream();
+                        reader = new InputStreamReader(inputStream);
+                        data = reader.read();
+                        String articleContent = "";
+
+
+                        while (data != -1){
+
+                            char currentData = (char) data;
+                            articleContent += currentData;
+                            data = reader.read();
+
+                        }
+
+                        Log.i("Article content", articleContent);
+                    }
+
+                }
+
                 return result;
+
 
             } catch (Exception e){
 
@@ -102,21 +175,6 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-
-            try{
-
-                JSONObject jsonObject = new JSONObject(s);
-
-
-
-            } catch (Exception e){
-
-                e.printStackTrace();
-            }
-        }
     }
 
 }
